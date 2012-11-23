@@ -33,13 +33,14 @@
     }
 }
 
-@(1+1)
+<h2>Executes arbitrary scripts on server. Super dangerous, use only in controlled sandboxed environments! </h2>
 
 <form action="." method="post">
-    <textarea cols="80" rows="20" name="script">@script</textarea>
-    <input type="submit">
+    <textarea cols="80" rows="20" name="script">@script</textarea><br />
+    <input type="submit" value="Run script">
 </form>
 
+<h2>Output</h2>
 <pre>
 @output
 </pre>
