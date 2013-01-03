@@ -1,20 +1,49 @@
-﻿@using System.Diagnostics;
+﻿@using System.CodeDom.Compiler;
+@using System.Diagnostics;
+@using System.Reflection;
+@using System.Web.Compilation;
 
-@{
-    string script = Request.Unvalidated("script");
-    var output = new System.Text.StringBuilder();
-
-    if (!String.IsNullOrEmpty(script))
+@functions {
+    string ExecuteBatchFile(string script)
     {
         string path = Server.MapPath("~/script.cmd");
         File.WriteAllText(path, script);
+
+        return ExecuteCommand("cmd.exe", "/c script.cmd");
+    }
+
+    string ExecuteConsoleApp(string script)
+    {
+        string path = Server.MapPath("~/app.cs");
+        File.WriteAllText(path, script);
+
+        string[] referencedAssemblies = BuildManager.GetReferencedAssemblies().OfType<Assembly>().Select(a => a.Location).ToArray();
+        var provider = new Microsoft.CSharp.CSharpCodeProvider();
+        CompilerResults results = provider.CompileAssemblyFromFile(
+            new CompilerParameters(referencedAssemblies) { GenerateExecutable = true },
+            path);
+        
+        if (results.Errors.HasErrors)
+        {
+            return results.Errors[0].ToString();
+        }
+
+        string output = ExecuteCommand(results.PathToAssembly);
+        File.Delete(results.PathToAssembly);
+
+        return output;
+    }
+
+    string ExecuteCommand(string command, string arguments = null)
+    {
+        var output = new System.Text.StringBuilder();
 
         var process = new Process();
 
         var startInfo = new ProcessStartInfo
         {
-            FileName = "cmd.exe",
-            Arguments = "/c script.cmd",
+            FileName = command,
+            Arguments = arguments,
             WorkingDirectory = HttpRuntime.AppDomainAppPath,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -30,6 +59,18 @@
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
         process.WaitForExit();
+
+        return output.ToString();
+    }
+}
+
+@{
+    string script = Request.Unvalidated("script");
+    string output = String.Empty;
+    
+    if (!String.IsNullOrEmpty(script))
+    {
+        output = Request.Form["execute"] == "Run batch" ? ExecuteBatchFile(script) : ExecuteConsoleApp(script);
     }
 }
 
@@ -37,7 +78,8 @@
 
 <form action="." method="post">
     <textarea cols="80" rows="20" name="script">@script</textarea><br />
-    <input type="submit" value="Run script">
+    <input type="submit" value="Run batch" name="execute">
+    <input type="submit" value="Run console" name="execute">
 </form>
 
 <h2>Output</h2>
