@@ -20,7 +20,10 @@
         string[] referencedAssemblies = BuildManager.GetReferencedAssemblies().OfType<Assembly>().Select(a => a.Location).ToArray();
         var provider = new Microsoft.CSharp.CSharpCodeProvider();
         CompilerResults results = provider.CompileAssemblyFromFile(
-            new CompilerParameters(referencedAssemblies) { GenerateExecutable = true },
+            new CompilerParameters(referencedAssemblies) {
+                GenerateExecutable = true,
+                OutputAssembly = Path.ChangeExtension(path, ".exe")
+            },
             path);
         
         if (results.Errors.HasErrors)
@@ -68,7 +71,28 @@
     string script = Request.Unvalidated("script");
     string output = String.Empty;
     
-    if (!String.IsNullOrEmpty(script))
+    if (String.IsNullOrEmpty(script))
+    {
+        script = @"
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+
+namespace ConsoleApplication1
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Console.WriteLine(""Hello world!"");
+        }
+    }
+}
+";
+    }
+    else
     {
         output = Request.Form["execute"] == "Run batch" ? ExecuteBatchFile(script) : ExecuteConsoleApp(script);
     }
