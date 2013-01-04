@@ -37,6 +37,17 @@
         return output;
     }
 
+    string ExecutePage(string script)
+    {
+        string path = Server.MapPath("~/page.aspx");
+        File.WriteAllText(path, script);
+
+        // TODO: capture the output instead of having it go straight to the response
+        Server.Execute("~/page.aspx");
+
+        return "";
+    }
+
     string ExecuteCommand(string command, string arguments = null)
     {
         var output = new System.Text.StringBuilder();
@@ -94,16 +105,28 @@ namespace ConsoleApplication1
     }
     else
     {
-        output = Request.Form["execute"] == "Run batch" ? ExecuteBatchFile(script) : ExecuteConsoleApp(script);
+        switch (Request.Form["execute"])
+        {
+            case "Run batch":
+                output = ExecuteBatchFile(script);
+                break;
+            case "Run console":
+                output = ExecuteConsoleApp(script);
+                break;
+            default:
+                output = ExecutePage(script);
+                break;
+        }
     }
 }
 
-<h2>Executes arbitrary scripts on server. Super dangerous, use only in controlled sandboxed environments! </h2>
+<h2>Executes arbitrary scripts on server. Super dangerous; use only in controlled sandboxed environments! </h2>
 
 <form action="." method="post">
     <textarea cols="80" rows="20" name="script">@script</textarea><br />
     <input type="submit" value="Run batch" name="execute">
     <input type="submit" value="Run console" name="execute">
+    <input type="submit" value="Run page" name="execute">
 </form>
 
 <h2>Output</h2>
